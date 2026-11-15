@@ -34,3 +34,15 @@ dist/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# VANISH temporary logs and generated packages
+VanishMobile/vanish-error.txt
+VanishMobile/vanish-log.txt
+*.apk
+*.aab
+
+# VANISH temporary logs and generated packages
+VanishMobile/vanish-error.txt
+VanishMobile/vanish-log.txt
+*.apk
+*.aab

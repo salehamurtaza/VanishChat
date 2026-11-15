@@ -1,0 +1,7 @@
+{
+  "name": "VanishMobile",
+  "displayName": "VanishMobile",
+  "plugins": [
+    "expo-sqlite"
+  ]
+}
