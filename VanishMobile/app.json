@@ -2,6 +2,12 @@
   "name": "VanishMobile",
   "displayName": "VanishMobile",
   "plugins": [
-    "expo-sqlite"
-  ]
+    "expo-sqlite",
+    "expo-asset"
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "174a22ae-5481-49a4-a92c-eb7374aa0128"
+    }
+  }
 }

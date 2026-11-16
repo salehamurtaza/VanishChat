@@ -259,18 +259,11 @@ export async function saveMessages(messages) {
 
 export async function getStoredMessages() {
   const db = await initDatabase();
-  const now = Date.now();
 
   return db.getAllAsync(
     `SELECT *
      FROM messages
-     WHERE state = 'queued'
-        OR (
-          expires_at IS NOT NULL
-          AND expires_at > ?
-        )
-     ORDER BY created_at ASC`,
-    [now]
+     ORDER BY created_at ASC`
   );
 }
 

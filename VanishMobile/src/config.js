@@ -3,7 +3,7 @@ export const APP_VERSION = '1.0.0';
 
 export const PROTOCOL_VERSION = '1.0';
 
-export const DEFAULT_RELAY = 'wss://vanish-backend-mcls.onrender.com';
+export const DEFAULT_RELAY = 'wss://vanish-backend-mcls.onrender.com/ws';
 
 export const DEFAULT_TTL_MS = 30_000;
 

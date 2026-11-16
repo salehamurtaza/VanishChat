@@ -85,6 +85,7 @@ export default function useRelay() {
   const mounted = useRef(true);
 
   const skew = useRef(0);
+  const clockSynced = useRef(false);
   const lastHeartbeatAck = useRef(0);
   const statusRef = useRef('idle');
 
@@ -134,8 +135,6 @@ export default function useRelay() {
       try {
         await initDatabase();
 
-        await deleteExpiredMessages();
-
         const stored = await getStoredMessages();
         const queued = await getQueuedMessages();
 
@@ -170,7 +169,11 @@ export default function useRelay() {
               return item.state === 'sent';
             }
 
-            return timestampMs(item.expires_at) > now;
+            return (
+              !clockSynced.current ||
+              timestampMs(item.expires_at) >
+                Date.now() + skew.current
+            );
           })
           .map((item) => ({
             id: item.id,
@@ -495,6 +498,23 @@ export default function useRelay() {
 
           if (serverTime != null) {
             skew.current = serverTime - Date.now();
+            clockSynced.current = true;
+
+            const relayNow = Date.now() + skew.current;
+
+            updateMessages((previous) =>
+              previous.filter((item) => {
+                if (item.state === 'queued') return true;
+
+                const expiresAt = timestampMs(item.expires_at);
+
+                return expiresAt == null || expiresAt > relayNow;
+              })
+            );
+
+            deleteExpiredMessages(relayNow).catch((error) => {
+              console.warn('SQLite expiry cleanup failed:', error);
+            });
           }
 
           // Never treat a rejected JOIN as a successful connection.
@@ -966,25 +986,31 @@ export default function useRelay() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      const now = Date.now() + skew.current;
+      if (clockSynced.current) {
+        const relayNow = Date.now() + skew.current;
 
-      updateMessages((previous) => {
-        const next = previous.filter((message) => {
-          if (message.state === 'queued') {
-            return true;
-          }
+        updateMessages((previous) => {
+          const next = previous.filter((message) => {
+            if (message.state === 'queued') {
+              return true;
+            }
 
-          const expiresAt = timestampMs(message.expires_at);
+            const expiresAt = timestampMs(message.expires_at);
 
-          // Messages without relay expiry timestamps are
-          // not assigned a fabricated local expiry.
-          return expiresAt != null && expiresAt > now;
+            // Messages without relay expiry timestamps are
+            // not assigned a fabricated local expiry.
+            return expiresAt == null || expiresAt > relayNow;
+          });
+
+          return next.length === previous.length
+            ? previous
+            : next;
         });
 
-        return next.length === previous.length
-          ? previous
-          : next;
-      });
+        deleteExpiredMessages(relayNow).catch((error) => {
+          console.warn('SQLite expiry cleanup failed:', error);
+        });
+      }
 
       const localNow = Date.now();
 
@@ -1010,9 +1036,6 @@ export default function useRelay() {
         );
       }
 
-      deleteExpiredMessages().catch((error) => {
-        console.warn('SQLite expiry cleanup failed:', error);
-      });
     }, 1000);
 
     return () => clearInterval(timer);
