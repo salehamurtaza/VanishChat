@@ -4,120 +4,152 @@
 
 VANISH (Vanish Class Network) is a mobile messaging application developed as a university Mobile Application Development project. It allows students to join a shared class room and exchange messages in real time.
 
-The application uses WebSocket communication through an externally hosted relay. Messages have a limited lifetime of 30 seconds, while local storage, offline message queuing and automatic reconnection help maintain communication during temporary network interruptions.
+The application uses WebSocket communication through an externally hosted relay. Messages have a limited lifetime of **30 seconds**, after which they automatically expire and are removed from the app's visible chat and applicable local message storage.
 
-VANISH is available as a standalone Android application, allowing users to install and run it without requiring VS Code, Expo Go or a development server.
+VANISH also supports local message storage, temporary offline message queuing, automatic reconnection, and duplicate-message prevention.
 
-## Key Features
+---
 
-- **Class Room Connection:** Join a shared class room using a display name and class code.
-- **Real-Time Messaging:** Exchange messages through WebSocket communication.
-- **Disappearing Messages:** Messages automatically expire according to their expiration timestamps.
-- **Countdown Timer:** Displays the remaining lifetime of messages.
-- **Message Length Limit:** Supports messages up to 280 characters.
-- **Offline Message Queue:** Saves outgoing messages locally when connectivity is unavailable.
-- **Automatic Reconnection:** Attempts to reconnect when the network connection is interrupted.
-- **Duplicate Prevention:** Uses message IDs and in-flight tracking to help prevent duplicate transmissions.
-- **Heartbeat Mechanism:** Sends periodic heartbeat messages to monitor the connection.
-- **Clock Synchronization:** Uses relay-provided timestamps to calculate message expiration.
-- **Local Data Storage:** Uses SQLite for messages and AsyncStorage for profile information.
-- **Settings Screen:** Provides profile and connection settings.
-- **Standalone Android Application:** Runs independently after installation.
+## Features
+
+- **Shared Class Room:** Students can join a class room and communicate with other connected users.
+- **Real-Time Messaging:** Messages are exchanged through WebSocket communication.
+- **Disappearing Messages:** Messages automatically expire after 30 seconds.
+- **Countdown Timer:** Each message displays its remaining lifetime.
+- **Message Length Limit:** Messages can contain up to 280 characters.
+- **Offline Message Queue:** Temporarily stores outgoing messages when the connection is unavailable.
+- **Automatic Reconnection:** Attempts to reconnect when the connection is interrupted.
+- **Duplicate Prevention:** Uses message IDs and in-flight tracking to help prevent duplicate delivery.
+- **Heartbeat Mechanism:** Periodically checks the connection with the relay.
+- **Server Time Synchronization:** Uses relay-provided timestamps to calculate message expiration.
+- **Local Database:** Stores messages and queue information using SQLite.
+- **Profile Storage:** Saves user profile information locally using AsyncStorage.
+- **Settings Screen:** Allows users to manage their app settings and profile.
+- **Standalone Android App:** Runs as an installed Android application without requiring Expo Go or a development server during normal use.
+
+---
 
 ## Technology Stack
 
-| Technology | Purpose |
+| Technology | Version / Usage |
 |---|---|
-| React Native 0.88.1 | Mobile application development |
-| Expo SDK 58 | Native modules and application tooling |
-| React 19.3 | User interface |
-| JavaScript | Application logic |
-| Expo SQLite | Local message database |
-| AsyncStorage | Profile storage |
-| React Native SVG | SVG graphics |
-| Expo Linear Gradient | Gradient UI elements |
+| React Native | 0.88.1 |
+| Expo SDK | 58 |
+| React | 19.3.0 |
+| JavaScript | Application language |
+| Expo SQLite | 58.0.17 |
+| AsyncStorage | 2.2.0 |
+| React Native SVG | 15.16.0 |
+| Expo Linear Gradient | 58.0.4 |
+| Expo Vector Icons | 15.1.1 |
 | WebSocket | Real-time communication |
+
+### Development Environment
+
+The following versions were installed in the development environment:
+
+| Tool | Version |
+|---|---|
+| Node.js | 24.19.0 |
+| npm | 11.17.0 |
+| Java (JDK) | 25.0.2 LTS |
+
+---
 
 ## Communication Architecture
 
-VANISH connects directly to an externally hosted WebSocket relay for communication between students.
+VANISH connects directly to an **externally hosted WebSocket relay** for real-time communication.
+
+The application does not require a locally running backend server from this repository.
 
 ### How Communication Works
 
-1. A student opens the mobile application.
-2. The student enters a display name and class code.
-3. The application establishes a WebSocket connection with the hosted relay.
-4. Outgoing messages are sent through the WebSocket connection.
-5. The relay facilitates delivery to other connected students.
-6. Receiving applications display the messages and manage their expiration countdown.
-7. When connectivity is interrupted, the application uses its local queue and reconnection mechanism to handle pending messages.
+1. A student enters their profile information and joins the class room.
+2. The application establishes a WebSocket connection with the hosted relay.
+3. When a student sends a message, the application sends it through the WebSocket connection.
+4. The relay handles message delivery to other connected students in the same class room.
+5. The receiving application stores the message locally and displays its countdown timer.
+6. The message expires automatically when its 30-second lifetime ends.
 
-The relay configuration is maintained in:
+The relay configuration is maintained inside:
 
 `VanishMobile/src/config.js`
 
-The hosted relay address is intentionally not published in this README.
+The hosted relay address is intentionally not displayed in this README.
 
-## Message Lifecycle and Expiration
+---
 
-The application manages messages through different states:
+## Message Lifecycle
 
-- **Queued:** The message is stored locally while waiting to be sent.
-- **Sent:** The message has been transmitted through the WebSocket connection.
-- **Delivered:** The message has received a delivery acknowledgement.
-- **Expired:** The message has reached its expiration timestamp.
+Each message follows a lifecycle managed by the application.
 
-### Expiration Handling
+| State | Description |
+|---|---|
+| Queued | The message is waiting to be sent because the connection is unavailable. |
+| Sent | The message has been sent through the WebSocket connection. |
+| Delivered | The message has been acknowledged as delivered. |
+| Expired | The message has reached the end of its lifetime. |
 
-- The configured message lifetime is 30 seconds.
-- The application uses relay-provided timestamps for expiration calculations.
-- The chat screen refreshes the countdown every second.
-- Expired messages are removed from the visible message list.
-- Database cleanup deletes expired messages in the sent and delivered states.
+### Message Expiration
+
+- Each message has a lifetime of 30 seconds.
+- Relay-provided timestamps are used to calculate expiration.
+- The countdown updates every second.
+- Expired messages are removed from the visible chat.
+- Expired messages in applicable sent and delivered states are cleaned from the local SQLite database.
+
+Expiration applies to messages managed by the application. It cannot guarantee deletion of screenshots, copied text, notifications, or information saved outside the application.
+
+---
 
 ## Offline Message Handling
 
-VANISH supports offline message queuing.
+VANISH includes a temporary offline message queue.
 
-When connectivity is unavailable:
+When the connection is unavailable:
 
-1. The outgoing message is saved in the local SQLite database.
-2. The application attempts to restore its WebSocket connection.
-3. After reconnection, eligible queued messages are checked.
-4. Messages are sent through the relay.
-5. Queue entries are removed after delivery acknowledgement.
-6. Messages older than the configured 60-second queue age are discarded.
+1. Outgoing messages are saved locally in SQLite.
+2. The application attempts to reconnect automatically.
+3. When the connection is restored, eligible queued messages are sent.
+4. The application waits for delivery acknowledgment before removing a queued message.
+5. Messages older than 60 seconds in the queue are discarded.
 
-The application also uses message IDs and in-flight tracking to help prevent duplicate transmissions.
+Message IDs and in-flight tracking help prevent duplicate sending during reconnection and delivery handling.
 
-## Local Storage
+---
 
-VANISH uses two storage technologies.
+## Local Data Storage
 
-### SQLite
+VANISH uses two local storage technologies.
 
-SQLite stores:
-- Message IDs and text.
-- Sender and device information.
-- Message states.
-- Sent and expiration timestamps.
-- Queued messages.
+### SQLite (Expo SQLite)
 
-The database also includes cleanup functions for deleting expired messages.
+SQLite is used for message-related data, including:
+
+- Message IDs
+- Sender information
+- Message text
+- Device IDs
+- Message states
+- Sent and expiration timestamps
+- Queued messages
 
 ### AsyncStorage
 
-AsyncStorage stores the user's profile information, including:
-- Display name.
-- Device ID.
-- Class information.
-- Relay configuration.
-- Join status.
+AsyncStorage stores local profile and application information, including:
+
+- Display name
+- Device ID
+- Class information
+- Relay configuration
+- Join status
+
+---
 
 ## Project Structure
 
 ```text
-VanishChat/
+VanishClassNetwork/
 │
 ├── VanishMobile/
 │   ├── src/
@@ -138,7 +170,6 @@ VanishChat/
 │   │   └── utils.js
 │   │
 │   ├── android/
-│   ├── ios/
 │   ├── App.js
 │   ├── App.tsx
 │   ├── app.json
@@ -149,28 +180,24 @@ VanishChat/
 └── README.md
 ```
 
+---
+
 ## Requirements
 
-### Development Requirements
+To set up the development environment, you need:
 
-- Node.js 22.11 or later
+- Node.js
 - npm
 - Java Development Kit (JDK)
 - Android Studio
 - Android SDK
-- Android emulator or physical Android device
+- Android Emulator or a physical Android device
 
-### Normal Application Usage
+An internet connection is required for communication through the hosted relay.
 
-- Android device.
-- Installed VANISH application.
-- Active internet connection for communication through the hosted relay.
-
-The installed standalone application does not require development tools for normal use.
+---
 
 ## Installation and Setup
-
-These instructions are for developers who want to clone and run the mobile application.
 
 ### 1. Clone the Repository
 
@@ -178,7 +205,7 @@ These instructions are for developers who want to clone and run the mobile appli
 git clone https://github.com/salehamurtaza/VanishChat.git
 ```
 
-### 2. Open the Mobile Application Directory
+### 2. Navigate to the Mobile Project
 
 ```bash
 cd VanishChat/VanishMobile
@@ -192,66 +219,57 @@ npm install
 
 ### 4. Run on Android
 
-Connect an Android device with USB debugging enabled or start an Android emulator.
-
-Run:
+With Android Studio, Android SDK, and the required development environment configured, run:
 
 ```bash
-npm run android
+npx expo run:android
 ```
 
-Alternatively, start the Metro development server:
-
-```bash
-npm start
-```
-
-A compatible Android development environment and configured device or emulator are required.
-
-## Standalone Android Application
-
-VANISH supports standalone Android APK installation.
-
-After installation:
-
-- The application runs independently.
-- VS Code and Expo Go are not required.
-- Metro Bundler is not required for normal use.
-- The application connects to the configured hosted relay.
-- An internet connection is required for real-time communication.
-
-The APK is distributed separately and is not included in this source repository.
-
-## Important Notes
-
-- The mobile application connects directly to an externally hosted WebSocket relay.
-- A locally configured backend server is not required.
-- An internet connection is required for real-time communication.
-- Offline messages are handled through the local SQLite queue.
-- Message expiration is managed using relay-provided timestamps.
-- Screenshots, copied text and information stored outside the application cannot be guaranteed to disappear when an in-app message expires.
-- Private credentials and sensitive configuration should not be committed to the public repository.
-
-## Project Information
-
-**Project Name:** VANISH — Vanish Class Network
-
-**Project Type:** Mobile Application
-
-**Framework:** React Native
-
-**Programming Language:** JavaScript
-
-**Communication Protocol:** WebSocket
-
-**Local Database:** SQLite
-
-**Platform:** Android
-
-**Application Format:** Standalone APK
-
-**Repository:** https://github.com/salehamurtaza/VanishChat
+This builds and runs the application on an available Android emulator or connected device.
 
 ---
 
-*Developed as a university Mobile Application Development project.*
+## Standalone Android Application
+
+VANISH is also available as a standalone Android application.
+
+Once installed, the application can be opened and used without:
+
+- VS Code
+- Expo Go
+- A running Metro development server
+
+An internet connection is still required to communicate with the hosted WebSocket relay.
+
+The standalone APK is distributed separately and is not included in this source repository.
+
+---
+
+## Important Notes
+
+- The application communicates through an externally hosted WebSocket relay.
+- No locally configured backend server is required from this repository.
+- An internet connection is required for real-time communication.
+- Outgoing messages may be temporarily queued when the connection is unavailable.
+- Queued messages older than 60 seconds are discarded.
+- Message expiration is managed using timestamps and the application's local storage.
+- The application cannot guarantee deletion of screenshots, copied text, notifications, or information saved outside the application.
+- The hosted relay address is maintained in the application's configuration and is not displayed in this README.
+
+---
+
+## Project Information
+
+| Detail | Description |
+|---|---|
+| Project Name | VANISH — Vanish Class Network |
+| Project Type | Mobile Messaging Application |
+| Course | Mobile Application Development |
+| Framework | React Native |
+| Development Platform | Android |
+| Programming Language | JavaScript |
+| Communication | WebSocket |
+| Local Database | SQLite |
+| Local Preferences | AsyncStorage |
+| Message Lifetime | 30 Seconds |
+| Repository | [VanishChat on GitHub](https://github.com/salehamurtaza/VanishChat) |
